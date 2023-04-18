@@ -14,7 +14,7 @@ $timestampDebut = strtotime($dateDebut); // Convertir la date de début en times
 $timestampFin = strtotime($dateFin); // Convertir la date de fin en timestamp
 
 // Utiliser array_filter pour filtrer les éléments du tableau
-$filteredData = array_filter($data, function($item) use ($timestampDebut, $timestampFin) {
+$filteredData = array_filter($data, function($item) use ($timestampDebut, $timestampFin, $pays) {
     $timestampElement = strtotime($item['date']); // Convertir la date de l'élément en timestamp
     return $item['nom'] === $pays && $timestampElement >= $timestampDebut && $timestampElement <= $timestampFin;
     // Retourner true si le nom de l'élément est "france" et que la date de l'élément est comprise entre la date de début et la date de fin
