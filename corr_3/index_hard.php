@@ -4,22 +4,24 @@
 $json = file_get_contents('../open_stats_coronavirus.json');
 $data = json_decode($json, true);
 
-// Je veux filtrer les données
-
-$dateDebut = '2021-01-01'; // Date de début de la période de filtrage
-$dateFin = '2021-01-04'; // Date de fin de la période de filtrage
-$pays = 'france'; // Pays pour lequel je veux filtrer les données
+// Je veux filtrer les données pour ne garder que celles qui correspondent à la période de temps et au pays que je veux
+// Je récupère ces données en GET, ou je mets des valeurs par défaut si elles ne sont pas présentes en utilisant des ternaires
+$dateDebut = isset($_GET['date_deb']) ? $_GET['date_deb'] : '2021-01-10'; // Date de début de la période de filtrage
+$dateFin = isset($_GET['date_fin']) ? $_GET['date_fin'] : '2022-01-10'; // Date de fin de la période de filtrage
+$pays = isset($_GET['pays']) ? $_GET['pays'] : 'japon'; // Pays pour lequel je veux filtrer les données
 
 $timestampDebut = strtotime($dateDebut); // Convertir la date de début en timestamp
 $timestampFin = strtotime($dateFin); // Convertir la date de fin en timestamp
 
-// Utiliser array_filter pour filtrer les éléments du tableau
+// On peut utiliser une boucle pour filtrer les éléments du tableau
+// Ou mieux : Utiliser array_filter pour filtrer les éléments du tableau
 $filteredData = array_filter($data, function($item) use ($timestampDebut, $timestampFin, $pays) {
     $timestampElement = strtotime($item['date']); // Convertir la date de l'élément en timestamp
     return $item['nom'] === $pays && $timestampElement >= $timestampDebut && $timestampElement <= $timestampFin;
     // Retourner true si le nom de l'élément est "france" et que la date de l'élément est comprise entre la date de début et la date de fin
 });
 
+// Warning : Si vous ne comprenez pas usort(), c'est pas grave du tout ! ça viendra avec le temps.
 // Je trie le tableau par date en utilisant la fonction usort() qui prend en paramètre un tableau et une fonction
 // de comparaison (ici, strcmp() qui compare deux chaînes de caractères), pour être sûr que les données soient triées
 usort($filteredData, function($a, $b) {
@@ -38,16 +40,14 @@ usort($filteredData, function($a, $b) {
 //   'source' => string 'Santé Publique France' (length=22)
 // ...
 
-// Je veux regrouper, les dates et par exemple les décès dans des tabeaux simples, pour pouvoir les afficher dans un graphique :
-
-$dates = []; // Tableau contenant les dates
-$deces = []; // Tableau contenant les décès
-
-// Pour chaque élément du tableau, je récupère la date et le nombre de décès
-foreach ($filteredData as $item) {
-    $dates[] = $item['date'];
-    $deces[] = intval($item['deces']);  // Je convertis en integer pour pouvoir faire des calculs avec (et par souci de cohérence)
-}
+// Je récupère un tableau associatif sous la forme ['date' => '2021-01-01', 'deces' => '64765']
+$decesByDate = array_column($filteredData, 'deces', 'date');
+// Je convertis toutes les valeurs de décès en integer, par souci de cohérence (optionnel, dans ce cas, mais souvent nécessaire pour éviter des bugs)
+// Je peux utiliser array_map() pour appliquer une fonction à chaque élément d'un tableau : c'est en gros, comme un foreach, mais en plus efficace
+// (pareil que pour usort() plus haut, si vous ne comprenez pas array_map(), c'est pas grave non plus. ça viendra avec le temps.
+$decesByDate = array_map(function($item) {
+    return (int) $item;
+}, $decesByDate);
 
 // Je peux maintenant afficher ces données dans un graphique, par exemple avec Chart.js
 // Chart.js est une librairie JavaScript qui permet de créer des graphiques de manière simple et efficace
@@ -55,36 +55,18 @@ foreach ($filteredData as $item) {
 // Comment transformer un tableau PHP en une chaîne de caractère que je peux passer à mon JS ?
 // Je peux tout simplement utiliser json_encode() pour transformer un tableau PHP en une chaîne de caractères JSON
 
-var_dump($dates);
-var_dump($deces);
-echo json_encode($dates) . "<br>";
-echo json_encode($deces) . "<br>";
 
-$graphAbcsisses = json_encode($dates);
-$graphOrdonnees = json_encode($deces);
-
-// ------------------------------------------------------------------------------------------------------
-
-// Pour aller plus loin : On peut optimiser le code pour qu'il soit efficace, en utilisant par exemple array_map() et/ou mieux, array_column()
-// Essayez par exemple :
-// Je récupère un tableau associatif sous la forme ['date' => '2021-01-01', 'deces' => '64765']
-$decesByDate = array_column($filteredData, 'deces', 'date');
-// Je convertis toutes les valeurs de décès en integer, par souci de cohérence (optionnel, dans ce cas, mais souvent nécessaire pour éviter des bugs)
-$decesByDate = array_map(function($item) {
-    return (int) $item;
-}, $decesByDate);
-
-var_dump($decesByDate);
-echo json_encode(array_keys($decesByDate)) . "<br>";
-echo json_encode(array_values($decesByDate)) . "<br>";
+// var_dump($decesByDate);
+// echo json_encode(array_keys($decesByDate)) . "<br>";
+// echo json_encode(array_values($decesByDate)) . "<br>";
+// Cela donne le même résultat qu'avec le foreach dans l'autre correction, 
+// mais en quelques lignes de code, et en plus efficace
 
 $graphAbcsisses = json_encode(array_keys($decesByDate));
 $graphOrdonnees = json_encode(array_values($decesByDate));
-
-// Cela donne le même résultat qu'avec le foreach ci-dessus, mais en quelques lignes de code, et en plus efficace
+// Ici j'ai encodé les clés et les valeurs du tableau associatif $decesByDate en JSON, pour pouvoir les passer à mon JS ci-dessous directement !
 
 // ------------------------------------------------------------------------------------------------------
-
 
 ?>
 
@@ -162,6 +144,29 @@ $graphOrdonnees = json_encode(array_values($decesByDate));
 		</div>
 	</nav>
 	
+    <div>
+        <form action="" method="get" class="d-flex flex-column">
+            <div class="d-flex">
+                <div class="form-group col-6">
+                    <label for="date_deb">Date Debut</label>
+                    <input type="date" class="form-control" id="date_deb" name="date_deb">
+                </div>
+                <div class="form-group col-6">
+                    <label for="date_fin">Date Debut</label>
+                    <input type="date" class="form-control" id="date_fin" name="date_fin">
+                </div>
+            </div>
+            <div class="d-flex justify-content-center">
+                <select class="mx-3" name="pays" id="pays">
+                    <option value="france">France</option>
+                    <option value="belgique">Belgique</option>
+                    <!-- Dans l'idéal vous pouvez récupérer tous les pays du json et les afficher ici -->
+                </select>
+                <button type="submit" class="btn btn-primary mx-3">Submit</button>
+            </div>
+        </form>
+    </div>
+
 	<!-- Div pour le graphique de ligne -->
 	<div class="chart-container container mt-5">
 		<canvas id="myChart"></canvas>
@@ -174,7 +179,7 @@ $graphOrdonnees = json_encode(array_values($decesByDate));
 			data: {
 				labels: <?= $graphAbcsisses ?>,
 				datasets: [{
-					label: 'Morts cumulées',
+					label: 'Morts cumulées pour le pays <?= $pays ?>',
 					data:  <?= $graphOrdonnees ?>,
 					backgroundColor: 'rgba(255, 99, 132, 0.2)',
 					borderColor: 'rgba(255, 99, 132, 1)',
