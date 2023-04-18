@@ -4,6 +4,14 @@
 // Ils permettent de réaliser une opération conditionnelle en une seule
 // ligne de code.
 
+
+// Quand utiliser une ternaire au lieu d'une structure if...else ?
+// - On les utilise en général quand on a un choix simple à faire, et qu'on veut
+// affecter une valeur à une variable en fonction de la valeur d'une autre variable.
+// - Si on a un choix plus complexe, il vaut mieux utiliser une structure if...else.
+// - Egalement si on veut exécurer une fonction en fonction d'une condition,
+// il vaut mieux utiliser une structure if...else.
+
 // Exemple :
 
 $age = 18;
